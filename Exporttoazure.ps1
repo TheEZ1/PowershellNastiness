@@ -21,22 +21,36 @@ param(
     )
 
 
+############################
+#The below checks for the existence of the vm folder
+############################
+function Download-vm {
 
-Connect-VIServer -Server $VIServer -Credential $Credential
+Connect-VIServer -Server $VIServer -Credential $Credential -ErrorAction Stop
 
+    If ((Test-path $Destination\$VM) -eq $true) {
+            Write-Host -ForegroundColor Yellow "The folder for the vm is already created.
+            "
+            write-host -ForegroundColor Yellow "If you would like to continue using the data that already exists type yes. 
+              
+            If you would like to overwrite the data currently in the folder type force.
 
-    Export-VApp -VM $VM -Destination $Destination -ErrorVariable VMFolderExists
-    
-      If ($VMFolderExists) {
-        If ((Test-path $Destination\$VM) -eq $true) {
-            Write-Host -ForegroundColor Yellow "The folder for the vm is already created."
-            $Continue = Read-Host "Would you like to continue? This will use the data that already exists.  Only yes will be accepted."
-            If ($Continue.ToLower() -ne "yes") {
-                exit}
-               }
+            If you would like to exit the script type anything else."
+            $Continue = "What is your answer?"
+            If ($Continue.ToLower() -eq "yes") {
+                } elseif ($Continue.ToLower() -eq "force") {
+                Export-VApp -VM $VM -Destination $Destination -Errorvariable CopyFail -Force
+                    If ($CopyFail) {
+                        write-host -ForegroundColor Red "The copy to $Destination has failed.  Please run the job again"
+                    }
+               } else {
+                exit
             }
-               
-
+            }
+        }
+####################
+#The below creates the tf file for the storage account and container
+#####################
 function set-storageaccount {
 
 $TerraformRoot = "C:\Users\Harold\Documents\Terraform\Azure1\"
@@ -108,7 +122,11 @@ terraform init
 terraform plan
 }
 }
+
+
+Download-vm
 set-storageaccount
+
 }
 
 exportto-azure -VM haproxy-1 -ExternalIP 8.8.8.8 -CompanyInit HHt -VIServer 192.168.1.138 -Credential (get-credential)
